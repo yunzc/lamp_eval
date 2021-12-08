@@ -1,0 +1,53 @@
+session_name: run_lamp
+
+# Default environment variables; Overwrite from command line
+environment:
+  DATA_PATH: /home/costar/Downloads/base1_2021-09-22-12-55-00_final_prelim2
+  DATA_FOLDER: rosbag/
+  BASE_NAME: base1
+  ROBOTS: husky3 spot1 spot3 spot4
+  DELAY: "400"
+  RATE: "10.0"
+  DURATION: "375"
+  RUN_NUMBER: "00"
+  USE_BAG_LC: "true"
+  WS: "/home/costar/subt_ws"
+  RVIZ: "true"
+
+options:
+  default-command: /bin/bash
+
+windows:
+- window_name: lamp
+  focus: true
+  layout: tiled
+  shell_command_before:
+    - source $WS/devel/setup.bash
+    - rosparam set /use_sim_time true
+  panes:
+    - roslaunch capability_base_station comm_bridge.launch robot_namespace:=$BASE_NAME robot_list:="$ROBOTS"
+    - sleep 5s; roslaunch bringup_base_station robots.launch base_namespace:=$BASE_NAME robot_list:="$ROBOTS" simulation:=false
+    - sleep 5s; roslaunch lamp turn_on_lamp_base.launch robot_namespace:=$BASE_NAME pgo_log:=$DATA_PATH/test_$RUN_NUMBER
+    - sleep 5s; rosbag play $DATA_PATH/$DATA_FOLDER/*comms_*.bag $DATA_PATH/$DATA_FOLDER/*_tf*.bag $DATA_PATH/$DATA_FOLDER/*lamp_*.bag
+        -s$DELAY -r$RATE --clock --topics clock:=/clock /tf /tf_static 
+        /husky3/lamp/pose_graph_incremental/compressed /husky3/lamp/keyed_scans/compressed /husky3/uwb_frontend/range_measurements /husky3/lamp/lamp_pose/compressed
+        /spot1/lamp/pose_graph_incremental/compressed /spot1/lamp/keyed_scans/compressed /spot1/uwb_frontend/range_measurements /spot1/lamp/lamp_pose/compressed
+        /spot3/lamp/pose_graph_incremental/compressed /spot3/lamp/keyed_scans/compressed /spot3/uwb_frontend/range_measurements /spot3/lamp/lamp_pose/compressed
+        /spot4/lamp/pose_graph_incremental/compressed /spot4/lamp/keyed_scans/compressed /spot4/uwb_frontend/range_measurements /spot4/lamp/lamp_pose/compressed
+        /base1/lamp/laser_loop_closures
+
+    - if $RVIZ; then
+      roslaunch capability_base_station rviz.launch robot_namespace:=$BASE_NAME;
+      fi;
+
+- window_name: record  
+  focus: false  
+  layout: tiled  
+  shell_command_before:
+    - mkdir $DATA_PATH/test_$RUN_NUMBER
+    - source $WS/devel/setup.bash
+    - rosparam set /use_sim_time true   
+
+  panes:
+    - rosbag record -O $DATA_PATH/test_$RUN_NUMBER/keyed_scans.bag /$BASE_NAME/lamp/keyed_scans
+    - sleep $DURATION; rosnode kill -a

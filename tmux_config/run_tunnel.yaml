@@ -1,0 +1,42 @@
+session_name: tunnel_experiment
+environment:
+  DATA_PATH: /media/costar/Samsung_T5/SubtProcessed/tunnel
+  BAG_PATH: /rosbag
+  BASE_NAME: base1
+  ROBOTS: husky3 husky4
+  DELAY: "0"
+  RATE: "1.0"
+  DURATION: "4300"
+  LABEL: "Odom"
+  WS: "/home/costar/subt_ws"
+
+  OUT_PG_FILE: base_b2_pg.zip
+
+options:
+  default-command: /bin/bash
+
+windows:
+- window_name: lamp
+  focus: true
+  layout: tiled
+  shell_command_before:
+    - source $WS/devel/setup.bash
+    - rosparam set /use_sim_time true
+  panes:
+    - roslaunch bringup_ugv husky_rerun_perception.launch robot_namespace:=$ROBOT_NAME
+    - roslaunch bringup_base_station robots.launch base_namespace:=$BASE_NAME robot_list:="$ROBOTS" simulation:=false
+    - roslaunch lamp turn_on_lamp_base.launch robot_namespace:=$BASE_NAME pgo_log:=$DATA_PATH/test_$LABEL
+    - sleep 10s; rosbag play $DATA_PATH/$BAG_PATH/*.bag -s$DELAY -r$RATE --clock clock:=/clock
+    
+- window_name: record  
+  focus: false  
+  layout: tiled  
+  shell_command_before:
+    - mkdir $DATA_PATH/test_$LABEL
+    - source $WS/devel/setup.bash
+    - rosparam set /use_sim_time true   
+
+  panes:
+    # Record posegraph data
+    - rosbag record -O $DATA_PATH/test_$LABEL/loop_closures.bag /$BASE_NAME/lamp/laser_loop_closures $BASE_NAME/lamp/loop_generation/loop_candidates $BASE_NAME/lamp/loop_candidate_queue/prioritized_loop_candidates $BASE_NAME/lamp/prioritization/prioritized_loop_candidates $BASE_NAME/lamp/loop_computation/loop_computation_status
+    - sleep $DURATION; rosnode kill -a 
