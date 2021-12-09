@@ -1,4 +1,4 @@
-session_name: benchmark_4
+session_name: sr2_husky4
 
 environment:
   DATA_PATH: "/home/costar/Downloads/husky4_2019-08-20-12-23-00_sr_d3t1"

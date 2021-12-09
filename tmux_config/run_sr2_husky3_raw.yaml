@@ -1,4 +1,4 @@
-session_name: benchmark_4
+session_name: sr2_husky3
 
 environment:
   DATA_PATH: "/media/costar/Samsung_T5/SubtData/tunnel_d3t1/husky3_2019-08-20-12-23-00_sr_d3t1"
