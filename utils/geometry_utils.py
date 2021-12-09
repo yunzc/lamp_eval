@@ -28,6 +28,12 @@ class Pose:
 		T = np.eye(4)
 		T[0:3, 0:3] = self.rot.as_dcm()
 		T[0:3, 3] = self.t
+		return T
+
+	def from_pose_matrix(self, T):
+		R = T[0:3, 0:3]
+		self.t = T[0:3, 3]
+		self.rot = Rot.from_dcm(R)
 
 	def set_translation(self, t):
 		self.t = t
@@ -48,6 +54,23 @@ class Pose:
 		self.t = np.array([pose_msg.position.x, pose_msg.position.y, pose_msg.position.z])
 		self.rot = Rot.from_quat(np.array([pose_msg.orientation.x, pose_msg.orientation.y, pose_msg.orientation.z, pose_msg.orientation.w]))
 
+	def __add__(self, other):
+		new_pose = Pose()
+		new_pose.from_pose_matrix(np.matmul(self.matrix(), other.matrix()))
+		return new_pose
+
+	def __sub__(self, other):
+		new_pose = Pose()
+		new_pose.from_pose_matrix(
+			np.matmul(np.linalg.inv(other.matrix()), self.matrix()))
+		return new_pose
+
+	def error(self, other):
+		dPose = self - other
+		t_error = np.linalg.norm(dPose.trans())
+		r_error = dPose.rot.magnitude()
+		return t_error, r_error
+
 	def __str__(self):
 		t = self.t
 		q = self.quat()
@@ -59,7 +82,7 @@ class PoseStamped:
 		self.pose = Pose()
 
 class PoseKeyed:
-	def __init___(self, key):
+	def __init__(self, key):
 		self.key = key
 		self.pose = Pose()
 

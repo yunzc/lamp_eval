@@ -1,7 +1,14 @@
 import geometry_utils as gu
 import csv
+import numpy as np
+
+from os.path import exists
 
 def read_traj_from_g2o(filename):
+	if not exists(filename):
+		print("Cannot find {}. ".format(filename))
+		return []
+
 	f = open(filename, "r")
 	poses = []
 	for line in f:
@@ -9,10 +16,12 @@ def read_traj_from_g2o(filename):
 			# VERTEX_SE3:QUAT 7133701809754865664 -7.81016 215.785 1.94888 0.005279 -0.020584 -0.004705 0.999763
 			line_split = line.split()
 			key = int(line_split[1])
-			pose = Pose()
+			pose = gu.Pose()
 			pose.set_translation(np.array([line_split[2], line_split[3], line_split[4]]))
 			pose.set_rotation(np.array([line_split[5], line_split[6], line_split[7], line_split[8]]))
-			poses.append(PoseKeyed(key, pose))
+			pose_keyed = gu.PoseKeyed(key)
+			pose_keyed.pose = pose
+			poses.append(pose_keyed)
 	return poses
 
 def write_traj_to_g2o(poses, filename):
