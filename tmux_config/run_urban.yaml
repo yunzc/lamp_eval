@@ -1,12 +1,12 @@
-session_name: tunnel_experiment
+session_name: urban_experiment
 environment:
-  DATA_PATH: /media/costar/Samsung_T5/SubtProcessed/tunnel
+  DATA_PATH: /media/costar/Samsung_T5/SubtProcessed/urban
   BAG_PATH: /rosbag
   BASE_NAME: base1
-  ROBOTS: husky3 husky4
+  ROBOTS: husky1 husky4 spot1
   DELAY: "0"
   RATE: "1.0"
-  DURATION: "4300"
+  DURATION: "2700"
   LABEL: "Odom"
   WS: "/home/costar/subt_ws"
 
