@@ -1,0 +1,78 @@
+session_name: beta2_husky4
+
+environment:
+  DATA_PATH: "/media/costar/Samsung_T5/SubtData/urban_beta2/spot1_2020-02-26-12-43-00_urban_r2_beta"
+  GT_PATH: "/media/costar/Samsung_T5/SubtData/urban_beta2/spot1_2020-02-26-12-43-00_urban_r2_beta/2_Spot1_Urban_Beta2"
+  DATA_FOLDER: "rosbag/"
+  # version of logging. If unsure, select 2 (the latest). 1 is for tunnel datasets
+  LOG_VERSION: "2" 
+  NUM_VLP: "1"
+  ROBOT_NAME: "spot1"
+  ROBOT_TYPE: "spot"
+  BASE_NAME: "base1"
+  DELAY: "1280"
+  RATE: "1"
+  DURATION: "1750"
+  ODOM: "lo_frontend/odometry"
+  RUN_NUMBER: "BASE_INPUT"
+  WS: "/home/costar/subt_ws"
+
+options:
+  default-command: /bin/bash
+
+windows:
+- window_name: lo_lamp  
+  focus: true  
+  layout: tiled  
+  shell_command_before:
+    - source $WS/devel/setup.bash
+    - rosparam set /use_sim_time true   
+    # Set up the parameter files from the GT products
+    - cp $GT_PATH/fiducial_calibration_$ROBOT_NAME.yaml ~/.ros/
+    - if [ $ROBOT_TYPE = 'husky' ]; then
+      cp $GT_PATH/$ROBOT_NAME*.yaml $(rospack find husky_custom_description)/config/ ;
+      fi;
+
+  panes:
+
+    ################################### RUN ###################################
+
+    # Launch basic components needed for running localization algorithms
+    - roslaunch bringup_ugv husky_rerun_perception.launch robot_namespace:=$ROBOT_NAME
+
+    # Bags and topics of interest (switching if the log versions is older)
+    - sleep 10; rosbag play $DATA_PATH/$DATA_FOLDER*.bag -s$DELAY -r$RATE --clock --topics clock:=/clock 
+      /$ROBOT_NAME/velodyne_points /$ROBOT_NAME/velodyne_front/velodyne_points /$ROBOT_NAME/velodyne_rear/velodyne_points 
+      /$ROBOT_NAME/hero/wio_ekf/odom /$ROBOT_NAME/vn100/imu_wori_wcov /$ROBOT_NAME/vn100/imu /$ROBOT_NAME/visual_odom 
+      /$ROBOT_NAME/wheel_odom ;
+    
+    # Front-end
+    - if [ $ROBOT_TYPE = 'husky' ]; then sleep 5;
+      roslaunch lo_frontend lo_frontend.launch robot_namespace:=$ROBOT_NAME number_of_velodynes:=$NUM_VLP;
+      fi;
+      if [ $ROBOT_TYPE = 'spot' ]; then sleep 5;
+      roslaunch lo_frontend lo_frontend.launch robot_namespace:=$ROBOT_NAME;
+      fi
+
+    # Back-end (NOTE: Make sure Loop Closures are disabled)
+    - sleep 4; roslaunch lamp turn_on_lamp.launch robot_namespace:=$ROBOT_NAME b_use_hero:=false
+    - sleep 4; roslaunch lamp turn_on_lamp_base.launch robot_namespace:=$BASE_NAME pgo_log:=$DATA_PATH/lamp_$RUN_NUMBER
+
+- window_name: record  
+  focus: false  
+  layout: tiled  
+  shell_command_before:
+    - source $WS/devel/setup.bash
+    - mkdir $DATA_PATH/lamp_$RUN_NUMBER
+    - rosparam set /use_sim_time true   
+
+  panes:
+
+    ################################### RECORD ###################################
+    # Topics for base rerun
+    - rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/odometry.bag /$ROBOT_NAME/lo_frontend/odometry
+    - rosbag record -O $DATA_PATH/lamp_$RUN_NUMBER/base_input.bag /$ROBOT_NAME/lamp/pose_graph_incremental /$ROBOT_NAME/lamp/keyed_scans
+
+    ################################ END RECORDING ###############################
+    - sleep $DURATION; rosnode kill -a
+    
